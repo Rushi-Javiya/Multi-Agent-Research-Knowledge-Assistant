@@ -39,7 +39,7 @@ Shared state (`src/research_assistant/state.py`) carries the question, sub-quest
 | 1 | Project scaffold, typed config, domain models, shared graph state, CI | Done |
 | 2 | Search provider abstraction + structured source retrieval | Done |
 | 3 | Page content extraction, cleaning, source preservation | Done |
-| 4 | Researcher node (planning sub-questions, retrieval, error handling) | |
+| 4 | Researcher node (planning sub-questions, retrieval, error handling) | Done |
 | 5 | Writer node with citation-based report generation | |
 | 6 | Deterministic grounding validator | |
 | 7 | Reviewer node + bounded writer-reviewer refinement loop | |
@@ -76,6 +76,27 @@ sources and reported, never silently dropped.
 that resolves to a private, loopback or link-local address, checking every redirect hop. Response
 size and content type are limited.
 
+Extraction prefers `<article>`/`<main>` content. For pages without them it drops short
+fragments (menu items), but longer menu text can still slip through. Pages with too little
+text (see `RESEARCH_MIN_PAGE_CHARS`) are demoted to snippet-only so they can't be cited as evidence.
+
+## Try the researcher agent (needs an Anthropic key)
+
+Put your key in `.env` (never commit it):
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+```bash
+research-assistant research "How does LangGraph human-in-the-loop work?"
+```
+
+Claude splits the question into focused search queries, each is retrieved, and sources are
+merged and deduplicated. The run is marked `failed` if no source has usable content, because a
+grounded report would be impossible. If planning fails the researcher falls back to the original
+question rather than crashing.
+
 ## Configuration
 
 Settings are read from `RESEARCH_*` environment variables or `.env` (see `.env.example`).
@@ -90,6 +111,9 @@ src/research_assistant/
   state.py           LangGraph shared state + reducers
   logging_config.py  logging setup
   cli.py             command line entry point
+  llm.py             Anthropic chat model factory
+  graph.py           LangGraph workflow assembly
+  agents/            planner and researcher agent nodes
   retrieval/         search providers, safe page fetcher, text extraction, pipeline
 tests/
 ```
