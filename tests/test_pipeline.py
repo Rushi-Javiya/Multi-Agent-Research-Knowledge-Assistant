@@ -47,6 +47,16 @@ def test_enriches_sources_and_preserves_failures():
     assert [s.id for s in result.sources] == [s.id for s in found]
 
 
+def test_thin_pages_are_kept_as_snippet_only():
+    found = [Source.from_url("https://a.com/ok", snippet="s1")]
+    result = retrieve(
+        "q", FakeSearch(found), fetcher(handler), max_sources=5, max_page_chars=500,
+        min_page_chars=100,
+    )
+    assert not result.sources[0].has_content
+    assert "too little text" in result.errors[0]
+
+
 def test_search_failure_is_reported_not_raised():
     search = FakeSearch(error=SearchError("down"))
     result = retrieve("q", search, fetcher(handler), max_sources=5, max_page_chars=500)

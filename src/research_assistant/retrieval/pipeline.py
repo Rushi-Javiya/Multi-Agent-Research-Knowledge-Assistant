@@ -18,13 +18,17 @@ class RetrievalResult:
     errors: list[str] = field(default_factory=list)
 
 
-def _enrich(source: Source, fetcher: PageFetcher, max_chars: int) -> tuple[Source, str | None]:
+def _enrich(
+    source: Source, fetcher: PageFetcher, max_chars: int, min_chars: int
+) -> tuple[Source, str | None]:
     try:
         title, text = extract_text(fetcher.fetch(source.url), max_chars)
     except FetchError as exc:
         return source, f"{source.url}: {exc}"
     if not text:
         return source, f"{source.url}: no extractable text"
+    if len(text) < min_chars:
+        return source, f"{source.url}: too little text ({len(text)} chars)"
     return source.model_copy(update={"title": title or source.title, "content": text}), None
 
 
@@ -34,6 +38,7 @@ def retrieve(
     fetcher: PageFetcher,
     max_sources: int,
     max_page_chars: int,
+    min_page_chars: int = 0,
     workers: int = 4,
 ) -> RetrievalResult:
     """Never raises for provider/page failures: they are reported in ``errors``.
@@ -48,7 +53,9 @@ def retrieve(
         return RetrievalResult(errors=[str(exc)])
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        results = list(pool.map(lambda s: _enrich(s, fetcher, max_page_chars), found))
+        results = list(
+            pool.map(lambda s: _enrich(s, fetcher, max_page_chars, min_page_chars), found)
+        )
 
     errors = [err for _, err in results if err]
     for err in errors:
