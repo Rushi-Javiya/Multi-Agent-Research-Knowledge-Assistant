@@ -4,7 +4,7 @@ A stateful multi-agent research workflow built with **LangGraph**. A supervisor 
 question through researcher, writer and reviewer agents that share one execution state, and
 produces a **citation-based report in which every claim is grounded in a retrieved source**.
 
-> Status: under active development, with one tested milestone per day. See the roadmap below.
+> Status: under active development. See the roadmap below for completed and upcoming targets.
 
 ## Goals
 
@@ -34,18 +34,16 @@ Shared state (`src/research_assistant/state.py`) carries the question, sub-quest
 
 ## Roadmap
 
-| Day | Milestone | Status |
-|----:|-----------|:------:|
-| 1 | Project scaffold, typed config, domain models, shared graph state, CI | Done |
-| 2 | Search provider abstraction + structured source retrieval | Done |
-| 3 | Page content extraction, cleaning, source preservation | Done |
-| 4 | Researcher node (planning sub-questions, retrieval, error handling) | Done |
-| 5 | Writer node with citation-based report generation | |
-| 6 | Deterministic grounding validator | |
-| 7 | Reviewer node + bounded writer-reviewer refinement loop | |
-| 8 | Supervisor + conditional routing, full graph assembly | |
-| 9 | Human-in-the-loop review via `interrupt` and `Command(resume=...)` | |
-| 10 | CLI, Docker, integration tests, final docs | |
+- [x] Project scaffold, typed config, domain models, shared graph state, CI
+- [x] Search provider abstraction and structured source retrieval
+- [x] Page content extraction, cleaning and source preservation
+- [x] Researcher agent: sub-question planning, retrieval, error handling
+- [ ] Writer agent with citation-based report generation
+- [ ] Deterministic grounding validator that rejects invalid citations
+- [ ] Reviewer agent and bounded writer-reviewer refinement loop
+- [ ] Supervisor with conditional routing and full graph assembly
+- [ ] Human-in-the-loop review via `interrupt` and `Command(resume=...)`
+- [ ] Docker image, integration tests and final documentation
 
 ## Getting started
 
