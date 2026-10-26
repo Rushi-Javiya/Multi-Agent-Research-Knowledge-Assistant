@@ -10,8 +10,9 @@ class FakeStructuredLLM:
         self._result = result
         self.messages = None
 
-    def with_structured_output(self, schema):
+    def with_structured_output(self, schema, **kwargs):
         self.schema = schema
+        self.kwargs = kwargs
         return self
 
     def invoke(self, messages):
@@ -35,6 +36,12 @@ def test_llm_planner_returns_cleaned_queries():
     llm = FakeStructuredLLM(SubQuestionPlan(sub_questions=["A ", "a", "B"]))
     assert LLMPlanner(llm).plan("question", 5) == ["A", "B"]
     assert llm.schema is SubQuestionPlan
+
+
+def test_llm_planner_avoids_forced_tool_calling():
+    llm = FakeStructuredLLM(SubQuestionPlan(sub_questions=["a"]))
+    LLMPlanner(llm)
+    assert llm.kwargs == {"method": "json_schema"}
 
 
 def test_llm_planner_accepts_dict_output():

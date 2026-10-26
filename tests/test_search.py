@@ -44,6 +44,13 @@ def test_backend_failure_becomes_search_error():
         DuckDuckGoSearch(boom).search("q", 3)
 
 
+def test_no_results_is_an_empty_list_not_an_error():
+    def nothing(query, max_results):
+        raise RuntimeError("No results found.")
+
+    assert DuckDuckGoSearch(nothing).search("very obscure query", 3) == []
+
+
 def test_blank_query_rejected():
     with pytest.raises(ValueError):
         DuckDuckGoSearch(_backend([])).search("  ", 3)

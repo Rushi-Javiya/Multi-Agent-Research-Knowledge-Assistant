@@ -25,6 +25,8 @@ class DuckDuckGoSearch:
         try:
             raw = self._backend(query, max_results)
         except Exception as exc:
+            if "no results" in str(exc).lower():
+                return []
             raise SearchError(f"DuckDuckGo search failed: {exc}") from exc
 
         sources: dict[str, Source] = {}
