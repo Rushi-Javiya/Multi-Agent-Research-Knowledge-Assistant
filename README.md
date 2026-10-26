@@ -37,8 +37,8 @@ Shared state (`src/research_assistant/state.py`) carries the question, sub-quest
 | Day | Milestone | Status |
 |----:|-----------|:------:|
 | 1 | Project scaffold, typed config, domain models, shared graph state, CI | Done |
-| 2 | Search provider abstraction + structured source retrieval | |
-| 3 | Page content extraction, cleaning, source preservation | |
+| 2 | Search provider abstraction + structured source retrieval | Done |
+| 3 | Page content extraction, cleaning, source preservation | Done |
 | 4 | Researcher node (planning sub-questions, retrieval, error handling) | |
 | 5 | Writer node with citation-based report generation | |
 | 6 | Deterministic grounding validator | |
@@ -60,6 +60,22 @@ pytest
 ruff check .
 ```
 
+## Try the retrieval layer
+
+No API key is needed for retrieval (it uses DuckDuckGo):
+
+```bash
+research-assistant retrieve "What is LangGraph and how does it work?" --max-sources 5
+```
+
+It searches, fetches each page, extracts the main text and prints every source with its
+citation id. Pages that can't be fetched (403, timeouts, non-HTML) are kept as snippet-only
+sources and reported, never silently dropped.
+
+**Security:** URLs come from search results, so the fetcher refuses non-http(s) schemes and any host
+that resolves to a private, loopback or link-local address, checking every redirect hop. Response
+size and content type are limited.
+
 ## Configuration
 
 Settings are read from `RESEARCH_*` environment variables or `.env` (see `.env.example`).
@@ -73,6 +89,8 @@ src/research_assistant/
   models.py          Source, ReviewVerdict, ResearchStatus
   state.py           LangGraph shared state + reducers
   logging_config.py  logging setup
+  cli.py             command line entry point
+  retrieval/         search providers, safe page fetcher, text extraction, pipeline
 tests/
 ```
 
