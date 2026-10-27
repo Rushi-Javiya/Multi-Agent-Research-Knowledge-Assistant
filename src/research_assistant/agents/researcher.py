@@ -1,9 +1,9 @@
 """Researcher agent: plans sub-questions, then retrieves and extracts sources."""
 
 import math
-from collections.abc import Callable
 from typing import Any
 
+from research_assistant.agents.common import NodeFn
 from research_assistant.agents.planner import QuestionPlanner
 from research_assistant.config import Settings
 from research_assistant.logging_config import get_logger
@@ -14,8 +14,6 @@ from research_assistant.retrieval.pipeline import retrieve
 from research_assistant.state import ResearchState, merge_sources
 
 log = get_logger("researcher")
-
-NodeFn = Callable[[ResearchState], dict[str, Any]]
 
 
 def make_researcher_node(

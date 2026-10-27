@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 from research_assistant.agents.planner import LLMPlanner
 from research_assistant.agents.researcher import make_researcher_node
+from research_assistant.agents.writer import LLMReportWriter, make_writer_node
 from research_assistant.config import get_settings
 from research_assistant.graph import build_graph
 from research_assistant.llm import LLMConfigError, build_llm
@@ -27,7 +28,7 @@ def _build_parser() -> argparse.ArgumentParser:
     cmd.add_argument("--preview-chars", type=int, default=300, help="characters of content to show")
 
     cmd = sub.add_parser(
-        "research", help="plan sub-questions with Claude, then retrieve sources for each"
+        "research", help="plan, retrieve sources, and write a cited report with Claude"
     )
     cmd.add_argument("question")
     cmd.add_argument("--preview-chars", type=int, default=200, help="characters of content to show")
@@ -81,7 +82,8 @@ def _run_research(question: str, preview_chars: int) -> int:
     fetcher = PageFetcher(timeout=settings.request_timeout_s)
     try:
         researcher = make_researcher_node(LLMPlanner(llm), DuckDuckGoSearch(), fetcher, settings)
-        final = build_graph(researcher).invoke(new_state(question))
+        writer = make_writer_node(LLMReportWriter(llm))
+        final = build_graph(researcher, writer).invoke(new_state(question))
     finally:
         fetcher.close()
 
@@ -89,6 +91,8 @@ def _run_research(question: str, preview_chars: int) -> int:
     for sub_question in final["sub_questions"]:
         print(f"  - {sub_question}")
     _print_sources(final["sources"], preview_chars)
+    if final.get("draft"):
+        print(f"\n{'=' * 70}\n{final['draft']}\n{'=' * 70}")
     _print_errors(final["errors"])
     print(f"\nstatus: {final['status']}")
     return 0 if final["status"] != "failed" else 1

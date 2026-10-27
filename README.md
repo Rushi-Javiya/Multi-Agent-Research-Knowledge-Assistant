@@ -38,7 +38,7 @@ Shared state (`src/research_assistant/state.py`) carries the question, sub-quest
 - [x] Search provider abstraction and structured source retrieval
 - [x] Page content extraction, cleaning and source preservation
 - [x] Researcher agent: sub-question planning, retrieval, error handling
-- [ ] Writer agent with citation-based report generation
+- [x] Writer agent with citation-based report generation
 - [ ] Deterministic grounding validator that rejects invalid citations
 - [ ] Reviewer agent and bounded writer-reviewer refinement loop
 - [ ] Supervisor with conditional routing and full graph assembly
@@ -78,7 +78,7 @@ Extraction prefers `<article>`/`<main>` content. For pages without them it drops
 fragments (menu items), but longer menu text can still slip through. Pages with too little
 text (see `RESEARCH_MIN_PAGE_CHARS`) are demoted to snippet-only so they can't be cited as evidence.
 
-## Try the researcher agent (needs an Anthropic key)
+## Try the researcher and writer agents (needs an Anthropic key)
 
 Put your key in `.env` (never commit it):
 
@@ -94,6 +94,12 @@ Claude splits the question into focused search queries, each is retrieved, and s
 merged and deduplicated. The run is marked `failed` if no source has usable content, because a
 grounded report would be impossible. If planning fails the researcher falls back to the original
 question rather than crashing.
+
+The writer then drafts a Markdown report from the sources that have extracted content,
+citing each claim by source id, e.g. `[7dd57631]`. Page text is passed to the model inside
+delimited `<source>` blocks and treated as untrusted data, so instructions hidden in a web page
+are not followed. The draft is **not yet validated**: the grounding validator is the next target.
+The writer also accepts reviewer feedback and the previous draft, which the refinement loop will use.
 
 ## Configuration
 

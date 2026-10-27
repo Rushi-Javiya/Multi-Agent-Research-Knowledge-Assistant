@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # LLM (Anthropic). The key is read from ANTHROPIC_API_KEY or .env, never logged.
     anthropic_api_key: SecretStr | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
     llm_model: str = "claude-sonnet-5-5"
-    max_output_tokens: int = Field(default=2048, ge=256, le=16000)
+    max_output_tokens: int = Field(default=4096, ge=256, le=16000)
     llm_timeout_s: float = Field(default=60.0, gt=0, le=300)
 
     # Human-in-the-loop review gate

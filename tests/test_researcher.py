@@ -1,6 +1,7 @@
 import httpx
 
 from research_assistant.agents.researcher import make_researcher_node
+from research_assistant.agents.writer import make_writer_node
 from research_assistant.config import Settings
 from research_assistant.graph import build_graph
 from research_assistant.models import ResearchStatus, Source
@@ -48,9 +49,14 @@ def settings(**overrides):
     return Settings(_env_file=None, **{**base, **overrides})
 
 
+class StubWriter:
+    def write(self, question, sources, feedback=None, previous_draft=""):
+        return "report"
+
+
 def run(planner, search, **overrides):
     node = make_researcher_node(planner, search, make_fetcher(), settings(**overrides))
-    return build_graph(node).invoke(new_state("original question"))
+    return build_graph(node, make_writer_node(StubWriter())).invoke(new_state("original question"))
 
 
 def test_plans_retrieves_and_merges_sources_across_sub_questions():
@@ -62,7 +68,7 @@ def test_plans_retrieves_and_merges_sources_across_sub_questions():
     assert [s.url for s in final["sources"]] == [
         "https://a.com/good1", "https://a.com/good2", "https://a.com/good3",
     ]
-    assert final["status"] == ResearchStatus.WRITING
+    assert final["status"] == ResearchStatus.REVIEWING
     assert final["errors"] == []
 
 
@@ -71,7 +77,7 @@ def test_planner_failure_falls_back_to_original_question():
     final = run(FakePlanner(error=RuntimeError("llm down")), search)
 
     assert final["sub_questions"] == ["original question"]
-    assert final["status"] == ResearchStatus.WRITING
+    assert final["status"] == ResearchStatus.REVIEWING
     assert any("planning failed" in e and "llm down" in e for e in final["errors"])
 
 
@@ -86,6 +92,19 @@ def test_no_usable_sources_marks_run_failed():
     assert final["status"] == ResearchStatus.FAILED
     assert len(final["sources"]) == 2
     assert any("no usable sources" in e for e in final["errors"])
+
+
+def test_failed_research_skips_the_writer():
+    class ExplodingWriter:
+        def write(self, *args, **kwargs):
+            raise AssertionError("writer must not run when research failed")
+
+    node = make_researcher_node(
+        FakePlanner(["q1"]), FakeSearch({"q1": ["bad1"]}), make_fetcher(), settings()
+    )
+    final = build_graph(node, make_writer_node(ExplodingWriter())).invoke(new_state("q"))
+    assert final["status"] == ResearchStatus.FAILED
+    assert final["draft"] == ""
 
 
 def test_usable_sources_rank_first_and_total_is_bounded():
