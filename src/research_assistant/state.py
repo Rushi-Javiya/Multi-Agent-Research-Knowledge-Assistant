@@ -3,7 +3,7 @@
 import operator
 from typing import Annotated, TypedDict
 
-from research_assistant.models import ResearchStatus, ReviewVerdict, Source
+from research_assistant.models import GroundingReport, ResearchStatus, ReviewVerdict, Source
 
 
 def merge_sources(left: list[Source], right: list[Source]) -> list[Source]:
@@ -25,6 +25,8 @@ class ResearchState(TypedDict, total=False):
     sub_questions: list[str]
     sources: Annotated[list[Source], merge_sources]
     draft: str
+    grounding: GroundingReport | None
+    report: str
     review: ReviewVerdict | None
     revision_count: int
     status: ResearchStatus
@@ -42,6 +44,8 @@ def new_state(question: str) -> ResearchState:
         sub_questions=[],
         sources=[],
         draft="",
+        grounding=None,
+        report="",
         review=None,
         revision_count=0,
         status=ResearchStatus.PLANNING,

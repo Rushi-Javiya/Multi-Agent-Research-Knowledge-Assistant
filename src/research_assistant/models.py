@@ -53,6 +53,17 @@ class ReviewVerdict(BaseModel):
     feedback: str = ""
 
 
+class GroundingReport(BaseModel):
+    """Result of the deterministic citation check on a draft."""
+
+    ok: bool
+    cited_ids: list[str] = Field(default_factory=list)
+    invalid_ids: list[str] = Field(default_factory=list)
+    uncited_blocks: list[str] = Field(default_factory=list)
+    coverage: float = 0.0
+    problems: list[str] = Field(default_factory=list)
+
+
 class ResearchStatus(StrEnum):
     PLANNING = "planning"
     RESEARCHING = "researching"

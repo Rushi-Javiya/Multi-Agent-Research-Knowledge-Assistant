@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     max_revisions: int = Field(default=2, ge=0, le=10)
     max_sources: int = Field(default=8, ge=1, le=50)
     max_sub_questions: int = Field(default=4, ge=1, le=10)
+    min_citation_coverage: float = Field(default=0.8, ge=0.0, le=1.0)
 
     # Retrieval
     request_timeout_s: float = Field(default=15.0, gt=0, le=120)

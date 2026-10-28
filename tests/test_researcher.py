@@ -1,5 +1,6 @@
 import httpx
 
+from research_assistant.agents.grounding_node import make_grounding_node
 from research_assistant.agents.researcher import make_researcher_node
 from research_assistant.agents.writer import make_writer_node
 from research_assistant.config import Settings
@@ -51,12 +52,14 @@ def settings(**overrides):
 
 class StubWriter:
     def write(self, question, sources, feedback=None, previous_draft=""):
-        return "report"
+        return f"The first source describes the topic in useful detail [{sources[0].id}]."
 
 
 def run(planner, search, **overrides):
     node = make_researcher_node(planner, search, make_fetcher(), settings(**overrides))
-    return build_graph(node, make_writer_node(StubWriter())).invoke(new_state("original question"))
+    gate = make_grounding_node(max_revisions=2, min_coverage=0.8)
+    graph = build_graph(node, make_writer_node(StubWriter()), gate)
+    return graph.invoke(new_state("original question"))
 
 
 def test_plans_retrieves_and_merges_sources_across_sub_questions():
@@ -102,7 +105,8 @@ def test_failed_research_skips_the_writer():
     node = make_researcher_node(
         FakePlanner(["q1"]), FakeSearch({"q1": ["bad1"]}), make_fetcher(), settings()
     )
-    final = build_graph(node, make_writer_node(ExplodingWriter())).invoke(new_state("q"))
+    gate = make_grounding_node(max_revisions=2, min_coverage=0.8)
+    final = build_graph(node, make_writer_node(ExplodingWriter()), gate).invoke(new_state("q"))
     assert final["status"] == ResearchStatus.FAILED
     assert final["draft"] == ""
 

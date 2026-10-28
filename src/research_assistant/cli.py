@@ -4,6 +4,7 @@ import argparse
 import sys
 from collections.abc import Sequence
 
+from research_assistant.agents.grounding_node import make_grounding_node
 from research_assistant.agents.planner import LLMPlanner
 from research_assistant.agents.researcher import make_researcher_node
 from research_assistant.agents.writer import LLMReportWriter, make_writer_node
@@ -83,7 +84,8 @@ def _run_research(question: str, preview_chars: int) -> int:
     try:
         researcher = make_researcher_node(LLMPlanner(llm), DuckDuckGoSearch(), fetcher, settings)
         writer = make_writer_node(LLMReportWriter(llm))
-        final = build_graph(researcher, writer).invoke(new_state(question))
+        gate = make_grounding_node(settings.max_revisions, settings.min_citation_coverage)
+        final = build_graph(researcher, writer, gate).invoke(new_state(question))
     finally:
         fetcher.close()
 
@@ -91,8 +93,10 @@ def _run_research(question: str, preview_chars: int) -> int:
     for sub_question in final["sub_questions"]:
         print(f"  - {sub_question}")
     _print_sources(final["sources"], preview_chars)
-    if final.get("draft"):
-        print(f"\n{'=' * 70}\n{final['draft']}\n{'=' * 70}")
+    if final.get("report"):
+        print(f"\n{'=' * 70}\n{final['report']}{'=' * 70}")
+    elif final.get("draft"):
+        print(f"\nREJECTED DRAFT (failed grounding, not a valid report):\n{final['draft']}")
     _print_errors(final["errors"])
     print(f"\nstatus: {final['status']}")
     return 0 if final["status"] != "failed" else 1
