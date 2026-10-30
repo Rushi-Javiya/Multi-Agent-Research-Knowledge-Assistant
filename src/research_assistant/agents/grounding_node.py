@@ -28,6 +28,7 @@ def make_grounding_node(max_revisions: int, min_coverage: float) -> NodeFn:
         if state.get("revision_count", 0) >= max_revisions:
             return {
                 "grounding": result,
+                "report": "",
                 "status": ResearchStatus.FAILED,
                 "errors": [
                     f"no grounded report after {max_revisions} revision(s): "
@@ -36,6 +37,7 @@ def make_grounding_node(max_revisions: int, min_coverage: float) -> NodeFn:
             }
         return {
             "grounding": result,
+            "report": "",
             "review": ReviewVerdict(
                 decision=ReviewDecision.REVISE, feedback=feedback_for_writer(result, sources)
             ),

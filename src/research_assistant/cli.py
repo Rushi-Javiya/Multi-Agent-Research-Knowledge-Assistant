@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from research_assistant.agents.grounding_node import make_grounding_node
 from research_assistant.agents.planner import LLMPlanner
 from research_assistant.agents.researcher import make_researcher_node
+from research_assistant.agents.reviewer import LLMReportReviewer, make_reviewer_node
 from research_assistant.agents.writer import LLMReportWriter, make_writer_node
 from research_assistant.config import get_settings
 from research_assistant.graph import build_graph
@@ -85,7 +86,9 @@ def _run_research(question: str, preview_chars: int) -> int:
         researcher = make_researcher_node(LLMPlanner(llm), DuckDuckGoSearch(), fetcher, settings)
         writer = make_writer_node(LLMReportWriter(llm))
         gate = make_grounding_node(settings.max_revisions, settings.min_citation_coverage)
-        final = build_graph(researcher, writer, gate).invoke(new_state(question))
+        reviewer = make_reviewer_node(LLMReportReviewer(llm), settings.max_revisions)
+        graph = build_graph(researcher, writer, gate, reviewer, settings.max_revisions)
+        final = graph.invoke(new_state(question))
     finally:
         fetcher.close()
 
@@ -97,6 +100,11 @@ def _run_research(question: str, preview_chars: int) -> int:
         print(f"\n{'=' * 70}\n{final['report']}{'=' * 70}")
     elif final.get("draft"):
         print(f"\nREJECTED DRAFT (failed grounding, not a valid report):\n{final['draft']}")
+    review = final.get("review")
+    if review is not None:
+        detail = f" - {review.feedback}" if review.feedback else ""
+        print(f"\nreviewer: {review.decision.value}{detail}")
+    print(f"revisions used: {final.get('revision_count', 0)}")
     _print_errors(final["errors"])
     print(f"\nstatus: {final['status']}")
     return 0 if final["status"] != "failed" else 1

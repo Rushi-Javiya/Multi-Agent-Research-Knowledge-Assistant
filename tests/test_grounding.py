@@ -1,4 +1,5 @@
 from research_assistant.agents.grounding_node import make_grounding_node
+from research_assistant.agents.reviewer import make_reviewer_node
 from research_assistant.agents.writer import make_writer_node
 from research_assistant.graph import build_graph
 from research_assistant.grounding import (
@@ -8,7 +9,7 @@ from research_assistant.grounding import (
     split_blocks,
     validate_grounding,
 )
-from research_assistant.models import ResearchStatus, ReviewDecision, Source
+from research_assistant.models import ResearchStatus, ReviewDecision, ReviewVerdict, Source
 from research_assistant.state import new_state
 
 A = Source.from_url("https://a.com/a", title="Source A", content="alpha facts")
@@ -124,6 +125,11 @@ class ScriptedWriter:
         return self.drafts[min(len(self.calls), len(self.drafts)) - 1]
 
 
+class ApprovingReviewer:
+    def review(self, question, report, sources):
+        return ReviewVerdict(decision=ReviewDecision.APPROVE)
+
+
 def researcher_stub(state):
     return {"sources": [A, B, THIN], "status": ResearchStatus.WRITING}
 
@@ -133,6 +139,8 @@ def run(writer, max_revisions=2):
         researcher_stub,
         make_writer_node(writer),
         make_grounding_node(max_revisions=max_revisions, min_coverage=0.8),
+        make_reviewer_node(ApprovingReviewer(), max_revisions),
+        max_revisions,
     )
     return graph.invoke(new_state("q"))
 
@@ -159,7 +167,7 @@ def test_ungrounded_draft_triggers_a_revision_with_concrete_feedback_then_passes
     assert writer.calls[1]["previous_draft"] == bad
     assert final["revision_count"] == 1
     assert final["status"] == ResearchStatus.REVIEWING
-    assert final["review"] is None
+    assert final["review"].decision == ReviewDecision.APPROVE
     assert "deadbeef" not in final["report"]
 
 

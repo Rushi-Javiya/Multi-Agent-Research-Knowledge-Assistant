@@ -2,10 +2,11 @@ import httpx
 
 from research_assistant.agents.grounding_node import make_grounding_node
 from research_assistant.agents.researcher import make_researcher_node
+from research_assistant.agents.reviewer import make_reviewer_node
 from research_assistant.agents.writer import make_writer_node
 from research_assistant.config import Settings
 from research_assistant.graph import build_graph
-from research_assistant.models import ResearchStatus, Source
+from research_assistant.models import ResearchStatus, ReviewDecision, ReviewVerdict, Source
 from research_assistant.retrieval.fetch import PageFetcher
 from research_assistant.state import new_state
 
@@ -50,6 +51,15 @@ def settings(**overrides):
     return Settings(_env_file=None, **{**base, **overrides})
 
 
+class ApprovingReviewer:
+    def review(self, question, report, sources):
+        return ReviewVerdict(decision=ReviewDecision.APPROVE)
+
+
+def approving_reviewer():
+    return make_reviewer_node(ApprovingReviewer(), 2)
+
+
 class StubWriter:
     def write(self, question, sources, feedback=None, previous_draft=""):
         return f"The first source describes the topic in useful detail [{sources[0].id}]."
@@ -58,7 +68,7 @@ class StubWriter:
 def run(planner, search, **overrides):
     node = make_researcher_node(planner, search, make_fetcher(), settings(**overrides))
     gate = make_grounding_node(max_revisions=2, min_coverage=0.8)
-    graph = build_graph(node, make_writer_node(StubWriter()), gate)
+    graph = build_graph(node, make_writer_node(StubWriter()), gate, approving_reviewer(), 2)
     return graph.invoke(new_state("original question"))
 
 
@@ -106,7 +116,8 @@ def test_failed_research_skips_the_writer():
         FakePlanner(["q1"]), FakeSearch({"q1": ["bad1"]}), make_fetcher(), settings()
     )
     gate = make_grounding_node(max_revisions=2, min_coverage=0.8)
-    final = build_graph(node, make_writer_node(ExplodingWriter()), gate).invoke(new_state("q"))
+    graph = build_graph(node, make_writer_node(ExplodingWriter()), gate, approving_reviewer(), 2)
+    final = graph.invoke(new_state("q"))
     assert final["status"] == ResearchStatus.FAILED
     assert final["draft"] == ""
 
